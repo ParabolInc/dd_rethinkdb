@@ -1,14 +1,14 @@
 package main
 
 type queryEngine struct {
-	ClientConnections float64 `gorethink:"client_connections"      exporter:"cluster,server"`
-	ClientsActive     float64 `gorethink:"clients_active"          exporter:"cluster,server"`
-	QueriesPerSec     float64 `gorethink:"queries_per_sec"         exporter:"cluster,server"`
-	QueriesTotal      float64 `gorethink:"queries_total"           exporter:"server"`
-	ReadDocsPerSec    float64 `gorethink:"read_docs_per_sec"       exporter:"all"`
-	ReadDocsTotal     float64 `gorethink:"read_docs_total"         exporter:"server,table_server"`
-	WrittenDocsPerSec float64 `gorethink:"written_docs_per_sec"    exporter:"all"`
-	WrittenDocsTotal  float64 `gorethink:"written_docs_total"      exporter:"server,table"`
+	ClientConnections float64 `gorethink:"client_connections"`
+	ClientsActive     float64 `gorethink:"clients_active"`
+	QueriesPerSec     float64 `gorethink:"queries_per_sec"`
+	QueriesTotal      float64 `gorethink:"queries_total"`
+	ReadDocsPerSec    float64 `gorethink:"read_docs_per_sec"`
+	ReadDocsTotal     float64 `gorethink:"read_docs_total"`
+	WrittenDocsPerSec float64 `gorethink:"written_docs_per_sec"`
+	WrittenDocsTotal  float64 `gorethink:"written_docs_total"`
 }
 
 type storageEngine struct {
@@ -33,10 +33,8 @@ type Stat struct {
 	ID            []string      `gorethink:"id"`
 	QueryEngine   queryEngine   `gorethink:"query_engine,omitempty" `
 	StorageEngine storageEngine `gorethink:"storage_engine,omitempty" `
-
-	Server string `gorethink:"server,omitempty" `
-	DB     string `gorethink:"db,omitempty" `
-	Table  string `gorethink:"table,omitempty" `
-
-	Error string `gorethink:"error,omitempty" `
+	Server        string        `gorethink:"server,omitempty" `
+	DB            string        `gorethink:"db,omitempty" `
+	Table         string        `gorethink:"table,omitempty" `
+	Error         string        `gorethink:"error,omitempty" `
 }

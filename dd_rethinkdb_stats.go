@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
-	//  "github.com/PagerDuty/godspeed"
+	"github.com/PagerDuty/godspeed"
 	log "github.com/Sirupsen/logrus"
 	r "gopkg.in/dancannon/gorethink.v2"
 )
@@ -12,17 +14,35 @@ type RethinkStats struct {
 	addr []string
 	tags []string
 	proc chan []Stat
+	g    *godspeed.Godspeed
 }
 
 func NewRethinkStats(addr, tags string) *RethinkStats {
+	env := os.Getenv("DD_RETHINKDB_ENV")
+
 	rs := &RethinkStats{
 		addr: strings.Split(addr, ","),
 		tags: strings.Split(tags, ","),
 		proc: make(chan []Stat),
 	}
 
-	go rs.procStats()
+	// DogStatsD
+	datadogHost := os.Getenv("DATADOG")
+	if datadogHost == "" {
+		datadogHost = "datadog"
+	}
+	if env == "" || env == "dev" {
+		datadogHost = "127.0.0.1"
+	}
+	g, err := godspeed.New(datadogHost, 8125, false)
+	if err != nil {
+		log.Fatalf("Failed to connect to datadog host: %s", datadogHost)
+	}
+	defer g.Conn.Close()
+	g.AddTags(rs.tags)
 
+	rs.g = g
+	go rs.procStats()
 	return rs
 }
 
@@ -61,30 +81,40 @@ func (rs *RethinkStats) Query() {
 
 func (rs *RethinkStats) procStats() {
 	for stats := range rs.proc {
-
-		countServers := 0
-		countTables := 0
-		countReplicas := 0
-
 		for _, stat := range stats {
-			//log.Printf("%+v", stat)
-
 			switch stat.ID[0] {
+			case "cluster":
+				{
+					rs.g.Gauge("rethinkdb.read_docs_per_sec.cluster", stat.QueryEngine.ReadDocsPerSec, nil)
+					rs.g.Gauge("rethinkdb.written_docs_per_sec.cluster", stat.QueryEngine.WrittenDocsPerSec, nil)
+				}
 			case "server":
 				{
-					countServers++
+					rs.g.Gauge(
+						fmt.Sprintf("rethinkdb.read_docs_per_sec.server.%s", stat.Server),
+						stat.QueryEngine.ReadDocsPerSec,
+						nil)
+					rs.g.Gauge(
+						fmt.Sprintf("rethinkdb.written_docs_per_sec.server.%s", stat.Server),
+						stat.QueryEngine.WrittenDocsPerSec,
+						nil)
 				}
 			case "table":
 				{
-					countTables++
+					rs.g.Gauge(
+						fmt.Sprintf("rethinkdb.read_docs_per_sec.table.%s", stat.Table),
+						stat.QueryEngine.ReadDocsPerSec,
+						nil)
+					rs.g.Gauge(
+						fmt.Sprintf("rethinkdb.written_docs_per_sec.table.%s", stat.Table),
+						stat.QueryEngine.WrittenDocsPerSec,
+						nil)
 				}
 			case "table_server":
 				{
-					countReplicas++
+					// replicas
 				}
 			}
 		}
-
-		log.Printf("%d, %d, %d", countServers, countTables, countReplicas)
 	}
 }
