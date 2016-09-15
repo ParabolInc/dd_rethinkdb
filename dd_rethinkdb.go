@@ -12,12 +12,20 @@ import (
 )
 
 var (
-	addr = flag.String("addr", "localhost:28015", "Database cluster address, comma separated")
-	tags = flag.String("tags", "rethinkdb", "Tags to associate with metrics, comma separated")
-	tick = flag.Duration("tick", 15*time.Second, "Statistics check interval")
+	env     = os.Getenv("DD_RETHINKDB_ENV")
+	addr    = flag.String("addr", "localhost:28015", "Database cluster address, comma separated")
+	tags    = flag.String("tags", "rethinkdb", "Tags to associate with metrics, comma separated")
+	tick    = flag.Duration("tick", 15*time.Second, "Statistics check interval")
+	verbose = flag.Bool("verbose", false, "Enable verbose logging")
 )
 
 func init() {
+	if env == "" || env == "dev" {
+		log.SetFormatter(&log.TextFormatter{})
+	} else {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
 	flag.Usage = func() {
 		fmt.Println(NameVersion())
 		fmt.Println()
@@ -47,7 +55,7 @@ func main() {
 		done <- true
 	}()
 
-	stats := NewRethinkStats(*addr, *tags)
+	stats := NewRethinkStats(*addr, *tags, env, *verbose)
 	stats.Query()
 
 	ticker := time.NewTicker(*tick)
