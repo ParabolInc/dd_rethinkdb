@@ -15,6 +15,7 @@ type RethinkStats struct {
 	tags    []string
 	verbose bool
 	stats   chan []Stat
+	session *r.Session
 	g       *godspeed.Godspeed
 }
 
@@ -26,6 +27,10 @@ func NewRethinkStats(addr, tags, env string, verbose bool) *RethinkStats {
 		verbose: verbose,
 	}
 
+	if rs.verbose {
+		log.Println("Connecting to DogStatsD..")
+	}
+
 	// DogStatsD
 	datadogHost := os.Getenv("DATADOG")
 	if datadogHost == "" {
@@ -35,7 +40,6 @@ func NewRethinkStats(addr, tags, env string, verbose bool) *RethinkStats {
 		datadogHost = "127.0.0.1"
 	}
 	g, _ := godspeed.New(datadogHost, 8125, false)
-	defer g.Conn.Close()
 	g.AddTags(rs.tags)
 
 	rs.g = g
@@ -44,20 +48,35 @@ func NewRethinkStats(addr, tags, env string, verbose bool) *RethinkStats {
 	return rs
 }
 
+func (rs *RethinkStats) Close() {
+	close(rs.stats)
+	rs.g.Conn.Close()
+	rs.session.Close()
+	if rs.verbose {
+		log.Println("DogStatsD connection closed")
+		log.Println("RethinkDB connection closed")
+	}
+}
+
 func (rs *RethinkStats) Query() {
-	session, err := r.Connect(r.ConnectOpts{
-		Addresses: rs.addr,
-		Database:  "rethinkdb",
-	})
-	defer session.Close()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("Failed to open database connection")
-		return
+	if rs.session == nil {
+		if rs.verbose {
+			log.Println("Connecting to RethinkDB..")
+		}
+		var err error
+		rs.session, err = r.Connect(r.ConnectOpts{
+			Addresses: rs.addr,
+			Database:  "rethinkdb",
+		})
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Error("Failed to open database connection")
+			return
+		}
 	}
 
-	res, err := r.Table("stats").Run(session)
+	res, err := r.Table("stats").Run(rs.session)
 	defer res.Close()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -81,7 +100,7 @@ func (rs *RethinkStats) procStats() {
 	var err error
 	for stats := range rs.stats {
 		if rs.verbose {
-			log.Println("Trying to send stats to DataDog..")
+			log.Println("Sending stats to DogStatsD..")
 		}
 		for _, stat := range stats {
 			switch stat.ID[0] {

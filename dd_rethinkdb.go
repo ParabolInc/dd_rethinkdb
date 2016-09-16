@@ -65,6 +65,7 @@ func main() {
 			stats.Query()
 		case <-done:
 			ticker.Stop()
+			stats.Close()
 			return
 		}
 	}
