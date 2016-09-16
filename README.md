@@ -1,3 +1,3 @@
-# dd_rethinkdb
+# DD RethinkDB
 
 RethinkDB stats plugin for DataDog
