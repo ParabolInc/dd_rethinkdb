@@ -106,18 +106,45 @@ func (rs *RethinkStats) procStats() {
 			switch stat.ID[0] {
 			case "cluster":
 				{
+					err = rs.g.Gauge("rethinkdb.client_connections.cluster", stat.QueryEngine.ClientConnections, nil)
+					err = rs.g.Gauge("rethinkdb.clients_active.cluster", stat.QueryEngine.ClientsActive, nil)
+					err = rs.g.Gauge("rethinkdb.queries_per_sec.cluster", stat.QueryEngine.QueriesPerSec, nil)
 					err = rs.g.Gauge("rethinkdb.read_docs_per_sec.cluster", stat.QueryEngine.ReadDocsPerSec, nil)
 					err = rs.g.Gauge("rethinkdb.written_docs_per_sec.cluster", stat.QueryEngine.WrittenDocsPerSec, nil)
 				}
 			case "server":
 				{
 					err = rs.g.Gauge(
+						fmt.Sprintf("rethinkdb.client_connections.server.%s", stat.Server),
+						stat.QueryEngine.ClientConnections,
+						nil)
+					err = rs.g.Gauge(
+						fmt.Sprintf("rethinkdb.clients_active.server.%s", stat.Server),
+						stat.QueryEngine.ClientsActive,
+						nil)
+					err = rs.g.Gauge(
+						fmt.Sprintf("rethinkdb.queries_per_sec.server.%s", stat.Server),
+						stat.QueryEngine.QueriesPerSec,
+						nil)
+					err = rs.g.Count(
+						fmt.Sprintf("rethinkdb.queries_total.server.%s", stat.Server),
+						stat.QueryEngine.QueriesTotal,
+						nil)
+					err = rs.g.Gauge(
 						fmt.Sprintf("rethinkdb.read_docs_per_sec.server.%s", stat.Server),
 						stat.QueryEngine.ReadDocsPerSec,
+						nil)
+					err = rs.g.Count(
+						fmt.Sprintf("rethinkdb.read_docs_total.server.%s", stat.Server),
+						stat.QueryEngine.ReadDocsTotal,
 						nil)
 					err = rs.g.Gauge(
 						fmt.Sprintf("rethinkdb.written_docs_per_sec.server.%s", stat.Server),
 						stat.QueryEngine.WrittenDocsPerSec,
+						nil)
+					err = rs.g.Count(
+						fmt.Sprintf("rethinkdb.wrriten_docs_total.server.%s", stat.Server),
+						stat.QueryEngine.WrittenDocsTotal,
 						nil)
 				}
 			case "table":
